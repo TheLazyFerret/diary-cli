@@ -10,6 +10,8 @@ use std::path::PathBuf;
 
 use crate::error::Error;
 
+/// All this env variable must be set before running the program
+const REQUIRED_ENV_VARIABLES: [&str; 2] = ["EDITOR", "HOME"];
 /// Default data home when DATA_HOME_VAR is empty.
 /// Requires to append at the begin the value of $HOME
 const DEFAULT_DATA_HOME: &str = ".local/share";
@@ -22,7 +24,7 @@ pub fn fetch_data_home_dir() -> Result<PathBuf, Error> {
       PathBuf::from(x)
     } else {
       let mut aux = PathBuf::from(env::var("HOME").unwrap());
-      aux.push("DEFAULT_DATA_HOME");
+      aux.push(DEFAULT_DATA_HOME);
       aux
     }
   };
@@ -38,9 +40,18 @@ pub fn fetch_data_home_dir() -> Result<PathBuf, Error> {
   }
 } // fn fetch_data_home_dir
 
+pub fn check_required_env() -> Option<Vec<Error>> {
+  let vec: Vec<Error> = REQUIRED_ENV_VARIABLES
+    .iter()
+    .filter(|x| env::var(x).is_err())
+    .map(|x| Error::RequiredEnvVarNotFound(x.to_string()))
+    .collect();
+  if vec.len() != 0 { Some(vec) } else { None }
+}
+
 #[cfg(test)]
 mod test {
-  use crate::utils::fetch_data_home_dir;
+  use crate::utils::{fetch_data_home_dir, check_required_env};
   use std::env;
 
   #[test]
@@ -57,5 +68,11 @@ mod test {
     };
     let result = fetch_data_home_dir().unwrap();
     assert_eq!(result, test_raw_path);
+  }
+  
+  #[test]
+  fn check_required_env_test() {
+    // Will always fail if all the env vars in REQUIRED_ENV_VAR are not set
+    assert!(check_required_env().is_none());
   }
 } // mod test
