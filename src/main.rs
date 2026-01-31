@@ -5,9 +5,10 @@
 //!
 //! Main file of the crate.
 
-mod error;
 mod utils;
 
-fn main() {
-  println!("Hello, world!");
+fn main() -> anyhow::Result<()> {
+  let data_path = utils::get_data_path()?;
+  utils::create_data_dir(&data_path)?;
+  Ok(())
 }
