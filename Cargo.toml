@@ -1,6 +1,6 @@
 [package]
 name = "diary-cli"
-description = "small command line diary utility."
+description = "Small command line diary utility."
 
 readme = "README.md"
 license = "MIT"
@@ -12,4 +12,5 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.100"
+clap = { version = "4.5.56", features = ["derive"] }
 time = "0.3.46"
