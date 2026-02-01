@@ -6,7 +6,7 @@
 //! Main file of the crate.
 
 use crate::utils::{
-  create_backup, create_file, get_daily_filename, get_data_path, get_editor, delete_file, run_editor
+  create_backup, create_file, delete_file, get_daily_filename, get_data_path, get_editor, restore_backup, run_editor
 };
 
 mod utils;
@@ -24,11 +24,22 @@ fn main() -> anyhow::Result<()> {
   // Creates a backup. If the editor fails, remove the changed and uses the backup.
   if main_path.is_file() {
     create_backup(&main_path, &backup_path)?;
-    run_editor(&editor, &main_path)?;
+    if !run_editor(&editor, &main_path)?.success() {
+      eprintln!("- Editor failed, restoring backup.");
+      restore_backup(&main_path, &backup_path)?;
+    }
+    else {
+      eprintln!("- Editor finished correctly.")
+    }
     delete_file(&backup_path)?;
   } else {
     create_file(&main_path)?;
-    run_editor(&editor, &main_path)?;
+    if !run_editor(&editor, &main_path)?.success() {
+      eprintln!("- Editor failed, deleting posible corrupted data.");
+      delete_file(&main_path)?;
+    } else {
+      eprintln!("- Editor finished correctly.");
+    }
   }
 
   Ok(())

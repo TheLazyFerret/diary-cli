@@ -11,6 +11,7 @@ use std::fs::File;
 use std::fs::remove_file;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::process::ExitStatus;
 
 use anyhow::Context;
 use time::OffsetDateTime;
@@ -81,16 +82,15 @@ pub fn get_editor() -> anyhow::Result<String> {
 }
 
 /// Run the editor child process.
-pub fn run_editor(editor: &str, path: &Path) -> anyhow::Result<()> {
+pub fn run_editor(editor: &str, path: &Path) -> anyhow::Result<ExitStatus> {
   let mut command = Command::new(editor);
   command.arg(path);
   eprintln!("- Command to run: {:?}", command);
   let mut child_handle = command.spawn().context("Failed to spawn editor child process")?;
-  child_handle.wait().context("Failed to wait the child")?;
-  eprintln!("- Editor finished correctly");
-  Ok(())
+  Ok(child_handle.wait().context("Failed to wait the child")?)
 }
 
+/// Function wrapper for removing a file from the filesystem.
 pub fn delete_file(path: &Path) -> anyhow::Result<()> {
   if !path.is_file() {
     eprintln!("- File {} doesn´t exit, skipping delete", path.to_str().unwrap());
@@ -100,4 +100,12 @@ pub fn delete_file(path: &Path) -> anyhow::Result<()> {
     eprintln!("- File {} correctly removed", path.to_str().unwrap());
     Ok(())
   }
+}
+
+/// Copies the content from the backup to the main file.
+pub fn restore_backup(main: &Path, backup: &Path) -> anyhow::Result<()> {
+  debug_assert!(main.is_file() && backup.is_file());
+  fs::copy(&backup, &main)?;
+  eprintln!("- Backup correctly restored");
+  Ok(())
 }
