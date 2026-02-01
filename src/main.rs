@@ -1,5 +1,5 @@
 //! Author: TheLazyFerret <https://github.com/TheLazyFerret>
-//! Copyright (c) 2025 TheLazyFerret
+//! Copyright (c) 2026 TheLazyFerret
 //!   Licensed under the MIT license.
 //!   See LICENSE file in the project root for full license information.
 //!
@@ -10,9 +10,14 @@ use crate::utils::{
   get_data_path, get_editor, restore_backup, run_editor,
 };
 
+use crate::args::set_arguments;
+
+mod args;
 mod utils;
 
 fn main() -> anyhow::Result<()> {
+  set_arguments();
+
   // User home data directory.
   let mut main_path = get_data_path()?;
   // Check if the program data directory exist. If not, creates it.
@@ -36,20 +41,17 @@ fn main() -> anyhow::Result<()> {
     create_backup(&data_path, &backup_path)?; // Creates the backup.
     if !run_editor(&editor, &data_path)?.success() {
       // If the editor failed.
-      eprintln!("- Editor failed, restoring backup.");
+      println!("- Editor failed, restoring backup.");
       restore_backup(&data_path, &backup_path)?;
     } else {
-      eprintln!("- Editor finished correctly.");
       delete_file(&backup_path)?;
     }
   } else {
     // If the file doesn't exist, creates a new one and is edited directly.
     create_data(&data_path)?;
     if !run_editor(&editor, &data_path)?.success() {
-      eprintln!("- Editor failed, deleting posible corrupted data.");
+      println!("- Editor failed, deleting posible corrupted data.");
       delete_file(&data_path)?;
-    } else {
-      eprintln!("- Editor finished correctly.");
     }
   }
 
