@@ -1,5 +1,5 @@
 //! Author: TheLazyFerret <https://github.com/TheLazyFerret>
-//! Copyright (c) 2025 TheLazyFerret
+//! Copyright (c) 2026 TheLazyFerret
 //!   Licensed under the MIT license.
 //!   See LICENSE file in the project root for full license information.
 //!
@@ -24,27 +24,30 @@ pub fn get_data_path() -> anyhow::Result<PathBuf> {
   if let Ok(x) = env::var("XDG_DATA_HOME") {
     // if XDG_DATA_HOME is set, use that path.
     result = PathBuf::from(x);
-    eprintln!("- Home data directory found: {}", result.to_str().unwrap());
+    print_debug(&format!("Home data directory found: {}", result.to_str().unwrap()));
   } else {
     // If not, fallback to default '$HOME/.local/share'
     let home_raw_path = env::var("HOME").context("Failed to retrieve $HOME value")?;
     result = PathBuf::from(home_raw_path);
     result.push(DEFAULT_XDG_DATA_PATH);
-    eprintln!("- Home data directory found: {}", result.to_str().unwrap());
+    print_debug(&format!("Home data directory found: {}", result.to_str().unwrap()));
   }
   result.push(PROGRAM_DIR_DATA_NAME);
-  eprintln!("- Program data directory: {}", result.to_str().unwrap());
+  print_debug(&format!("Program data directory: {}", result.to_str().unwrap()));
   Ok(result)
 }
 
 /// Check if the data directory exist, if not, attempts to create it.
 pub fn check_data_dir(path: &Path) -> anyhow::Result<()> {
   if path.is_dir() {
-    eprintln!("- The data directory already exist: {}", path.to_str().unwrap());
+    print_debug(&format!("The data directory already exist: {}", path.to_str().unwrap()));
   } else {
-    eprintln!("- The data directory doesn't exist, will be created in: {}", path.to_str().unwrap());
+    print_debug(&format!(
+      "The data directory doesn't exist, will be created in: {}",
+      path.to_str().unwrap()
+    ));
     fs::create_dir(path).context("Failed to create the data directory")?;
-    eprintln!("- The data directory was sucesfully created");
+    print_debug("The data directory was sucesfully created");
   }
   Ok(())
 }
@@ -52,7 +55,7 @@ pub fn check_data_dir(path: &Path) -> anyhow::Result<()> {
 /// Returns the daily date filename, with extension '.txt'.
 pub fn get_daily_filename() -> String {
   let date = OffsetDateTime::now_utc().date().to_string();
-  eprintln!("- Retrieved date: {}", date);
+  print_debug(&format!("Retrieved date: {}", date));
   date
 }
 
@@ -61,7 +64,7 @@ pub fn create_backup(original: &Path, backup: &Path) -> anyhow::Result<()> {
   debug_assert!(original.is_file() && !backup.is_file());
   File::create(backup).context("Failed to create the backup file")?;
   fs::copy(original, backup).context("Failed to copy the original to the backup")?;
-  eprintln!("- Created backup file in: {}", backup.to_str().unwrap());
+  print_debug(&format!("Created backup file in: {}", backup.to_str().unwrap()));
   Ok(())
 }
 
@@ -69,14 +72,14 @@ pub fn create_backup(original: &Path, backup: &Path) -> anyhow::Result<()> {
 pub fn create_data(path: &Path) -> anyhow::Result<()> {
   debug_assert!(!path.is_file());
   File::create(path).context("Failed to create the data file")?;
-  eprintln!("- Created data file in: {}", path.to_str().unwrap());
+  print_debug(&format!("Created data file in: {}", path.to_str().unwrap()));
   Ok(())
 }
 
 /// Return the value of $EDITOR.
 pub fn get_editor() -> anyhow::Result<String> {
   let value = env::var("EDITOR").context("Failed to retrieve env var $EDITOR")?;
-  eprintln!("- Retrieved $EDITOR value: {}", value);
+  print_debug(&format!("Retrieved $EDITOR value: {}", value));
   Ok(value)
 }
 
@@ -84,7 +87,7 @@ pub fn get_editor() -> anyhow::Result<String> {
 pub fn run_editor(editor: &str, path: &Path) -> anyhow::Result<ExitStatus> {
   let mut command = Command::new(editor);
   command.arg(path);
-  eprintln!("- Command to run: {:?}", command);
+  print_debug(&format!("Command to run: {:?}", command));
   let mut child_handle = command.spawn().context("Failed to spawn editor child process")?;
   Ok(child_handle.wait().context("Failed to wait the child")?)
 }
@@ -92,11 +95,11 @@ pub fn run_editor(editor: &str, path: &Path) -> anyhow::Result<ExitStatus> {
 /// Function wrapper for removing a file from the filesystem.
 pub fn delete_file(path: &Path) -> anyhow::Result<()> {
   if !path.is_file() {
-    eprintln!("- File {} doesn´t exit, skipping delete", path.to_str().unwrap());
+    print_debug(&format!("File {} doesn´t exit, skipping delete", path.to_str().unwrap()));
     Ok(())
   } else {
     fs::remove_file(path).context("Failed to remove the file")?;
-    eprintln!("- File {} correctly removed", path.to_str().unwrap());
+    print_debug(&format!("File {} correctly removed", path.to_str().unwrap()));
     Ok(())
   }
 }
@@ -105,7 +108,7 @@ pub fn delete_file(path: &Path) -> anyhow::Result<()> {
 pub fn restore_backup(main: &Path, backup: &Path) -> anyhow::Result<()> {
   debug_assert!(main.is_file() && backup.is_file());
   fs::copy(&backup, &main).context("Failed to copy the data in the backup")?;
-  eprintln!("- Backup correctly restored");
+  print_debug("Backup correctly restored");
   delete_file(&backup)?;
   Ok(())
 }
@@ -115,10 +118,10 @@ pub fn backup_check(path: &Path) -> anyhow::Result<()> {
   // Retrieve the .backup file path list.
   let backup_files: Vec<PathBuf> = get_backup_files(path)?;
   if backup_files.is_empty() {
-    eprintln!("- No backup to restore");
+    print_debug("No backup to restore");
     return Ok(());
   }
-  eprintln!("- Found {} backups to restore", backup_files.len());
+  print_debug(&format!("Found {} backups to restore", backup_files.len()));
   for backup_file in backup_files {
     debug_assert!(backup_file.exists());
     let mut data_file = backup_file.clone();
@@ -127,9 +130,10 @@ pub fn backup_check(path: &Path) -> anyhow::Result<()> {
       create_data(&data_file)?;
     } // Creates the file if not exist
     restore_backup(&data_file, &backup_file)?; // Restore the content.
-    eprintln!("- Correctly restored backup: {}", backup_file.to_str().unwrap());
+    print_debug(&format!("Correctly restored backup: {}", backup_file.to_str().unwrap()));
   }
-  eprintln!("- Finished backup restore");
+  eprintln!();
+  print_debug("Finish backup restauration");
   Ok(())
 }
 
@@ -156,4 +160,12 @@ pub fn get_backup_files(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
     }
   }
   Ok(curated_vec)
+}
+
+/// Check and print verbose logs in error output if enabled.
+pub fn print_debug(message: &str) {
+  let value = crate::args::DEBUG.lock().expect("Error locking mutex");
+  if *value == true {
+    eprintln!("[DEBUG] {}", message);
+  }
 }
