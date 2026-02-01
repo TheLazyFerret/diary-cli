@@ -59,7 +59,7 @@ pub fn get_daily_filename() -> String {
 
 /// Creates a backup file of the daily file.
 pub fn create_backup(original: &Path, backup: &Path) -> anyhow::Result<()> {
-  //debug_assert!(original.is_file() && !backup.is_file());
+  debug_assert!(original.is_file() && !backup.is_file());
   File::create(backup).context("Failed to create the backup file")?;
   fs::copy(original, backup).context("Failed to copy the original to the backup")?;
   eprintln!("- Created backup file in: {}", backup.to_str().unwrap());
@@ -107,5 +107,51 @@ pub fn restore_backup(main: &Path, backup: &Path) -> anyhow::Result<()> {
   debug_assert!(main.is_file() && backup.is_file());
   fs::copy(&backup, &main)?;
   eprintln!("- Backup correctly restored");
+  delete_file(&backup)?;
   Ok(())
+}
+
+/// Restore all the '.backup' file in the data directory.
+pub fn backup_check(path: &Path) -> anyhow::Result<()> {
+  // Retrieve the .backup file path list.
+  let backup_files: Vec<PathBuf> = get_backup_files(path)?;
+  if backup_files.is_empty() {
+    eprintln!("- No backup to restore");
+  }
+  eprintln!("- Found {} backups to restore", backup_files.len());
+  for backup_file in backup_files {
+    debug_assert!(backup_file.exists());
+    let mut data_file = backup_file.clone();
+    data_file.set_extension("txt");
+    if !data_file.is_file() {create_file(&data_file)?;} // Creates the file if not exist
+    restore_backup(&data_file, &backup_file)?; // Restore the content.
+    eprintln!("- Correctly restored backup: {}", backup_file.to_str().unwrap());
+  }
+  eprintln!("- Finished backup restore");
+  Ok(())
+}
+
+/// Returns a vector with all the Path of the files with extension '.backup' in the directory.
+pub fn get_backup_files(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
+  let mut vec: Vec<PathBuf> = Vec::new();
+  let entry_list = path.read_dir().context("Error reading directory")?;
+  // First loop for getting files in the directory.
+  for entry in entry_list {
+    if let Ok(unwrap_entry) = entry {
+      let entry_path = unwrap_entry.path();
+      if entry_path.is_file() {
+        vec.push(entry_path);
+      }
+    }
+  }
+  let mut curated_vec: Vec<PathBuf> = Vec::new();
+  // Second loop for getting the .backup files.
+  for entry in vec {
+    if let Some(extension) = entry.extension() {
+      if extension.to_str().expect("Error unwrapping OsStr extension") == "backup" {
+        curated_vec.push(entry);
+      }
+    }
+  }
+  Ok(curated_vec)
 }
