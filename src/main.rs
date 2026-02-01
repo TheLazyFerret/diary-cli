@@ -16,6 +16,7 @@ mod args;
 mod utils;
 
 fn main() -> anyhow::Result<()> {
+  // Parse and set the program args params.
   set_arguments();
 
   // User home data directory.
