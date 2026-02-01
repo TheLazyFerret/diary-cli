@@ -8,7 +8,6 @@
 use std::env;
 use std::fs;
 use std::fs::File;
-use std::fs::remove_file;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::process::ExitStatus;
@@ -25,27 +24,27 @@ pub fn get_data_path() -> anyhow::Result<PathBuf> {
   if let Ok(x) = env::var("XDG_DATA_HOME") {
     // if XDG_DATA_HOME is set, use that path.
     result = PathBuf::from(x);
-    eprintln!("- Data path found: {}", result.to_str().unwrap());
+    eprintln!("- Home data directory found: {}", result.to_str().unwrap());
   } else {
     // If not, fallback to default '$HOME/.local/share'
     let home_raw_path = env::var("HOME").context("Failed to retrieve $HOME value")?;
     result = PathBuf::from(home_raw_path);
     result.push(DEFAULT_XDG_DATA_PATH);
-    eprintln!("- Data path found: {}", result.to_str().unwrap());
+    eprintln!("- Home data directory found: {}", result.to_str().unwrap());
   }
   result.push(PROGRAM_DIR_DATA_NAME);
-  eprintln!("- Using the path: {}", result.to_str().unwrap());
+  eprintln!("- Program data directory: {}", result.to_str().unwrap());
   Ok(result)
 }
 
-/// Check if the directory exist, if not, attempts to create it.
-pub fn create_data_dir(path: &Path) -> anyhow::Result<()> {
+/// Check if the data directory exist, if not, attempts to create it.
+pub fn check_data_dir(path: &Path) -> anyhow::Result<()> {
   if path.is_dir() {
-    eprintln!("- The path already exist: {}", path.to_str().unwrap());
+    eprintln!("- The data directory already exist: {}", path.to_str().unwrap());
   } else {
-    eprintln!("- The path doesn't exist, attempting to create: {}", path.to_str().unwrap());
+    eprintln!("- The data directory doesn't exist, will be created in: {}", path.to_str().unwrap());
     fs::create_dir(path).context("Failed to create the data directory")?;
-    eprintln!("- The directory was sucesfully created");
+    eprintln!("- The data directory was sucesfully created");
   }
   Ok(())
 }
@@ -53,7 +52,7 @@ pub fn create_data_dir(path: &Path) -> anyhow::Result<()> {
 /// Returns the daily date filename, with extension '.txt'.
 pub fn get_daily_filename() -> String {
   let date = OffsetDateTime::now_utc().date().to_string();
-  eprintln!("- Retrieved daily date filename: {}", date);
+  eprintln!("- Retrieved date: {}", date);
   date
 }
 
@@ -67,10 +66,10 @@ pub fn create_backup(original: &Path, backup: &Path) -> anyhow::Result<()> {
 }
 
 /// Creates a file in path.
-pub fn create_file(path: &Path) -> anyhow::Result<()> {
+pub fn create_data(path: &Path) -> anyhow::Result<()> {
   debug_assert!(!path.is_file());
-  File::create(path).context("Failed to create the daily file")?;
-  eprintln!("- Created file in: {}", path.to_str().unwrap());
+  File::create(path).context("Failed to create the data file")?;
+  eprintln!("- Created data file in: {}", path.to_str().unwrap());
   Ok(())
 }
 
@@ -96,7 +95,7 @@ pub fn delete_file(path: &Path) -> anyhow::Result<()> {
     eprintln!("- File {} doesn´t exit, skipping delete", path.to_str().unwrap());
     Ok(())
   } else {
-    remove_file(path)?;
+    fs::remove_file(path).context("Failed to remove the file")?;
     eprintln!("- File {} correctly removed", path.to_str().unwrap());
     Ok(())
   }
@@ -105,7 +104,7 @@ pub fn delete_file(path: &Path) -> anyhow::Result<()> {
 /// Copies the content from the backup to the main file.
 pub fn restore_backup(main: &Path, backup: &Path) -> anyhow::Result<()> {
   debug_assert!(main.is_file() && backup.is_file());
-  fs::copy(&backup, &main)?;
+  fs::copy(&backup, &main).context("Failed to copy the data in the backup")?;
   eprintln!("- Backup correctly restored");
   delete_file(&backup)?;
   Ok(())
@@ -117,13 +116,16 @@ pub fn backup_check(path: &Path) -> anyhow::Result<()> {
   let backup_files: Vec<PathBuf> = get_backup_files(path)?;
   if backup_files.is_empty() {
     eprintln!("- No backup to restore");
+    return Ok(());
   }
   eprintln!("- Found {} backups to restore", backup_files.len());
   for backup_file in backup_files {
     debug_assert!(backup_file.exists());
     let mut data_file = backup_file.clone();
     data_file.set_extension("txt");
-    if !data_file.is_file() {create_file(&data_file)?;} // Creates the file if not exist
+    if !data_file.is_file() {
+      create_data(&data_file)?;
+    } // Creates the file if not exist
     restore_backup(&data_file, &backup_file)?; // Restore the content.
     eprintln!("- Correctly restored backup: {}", backup_file.to_str().unwrap());
   }
