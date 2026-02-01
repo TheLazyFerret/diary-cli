@@ -6,7 +6,7 @@
 //! Main file of the crate.
 
 use crate::utils::{
-  create_backup, create_file, get_daily_filename, get_data_path, get_editor, remove_file, run_editor
+  create_backup, create_file, get_daily_filename, get_data_path, get_editor, delete_file, run_editor
 };
 
 mod utils;
@@ -25,7 +25,7 @@ fn main() -> anyhow::Result<()> {
   if main_path.is_file() {
     create_backup(&main_path, &backup_path)?;
     run_editor(&editor, &main_path)?;
-    remove_file(&backup_path)?;
+    delete_file(&backup_path)?;
   } else {
     create_file(&main_path)?;
     run_editor(&editor, &main_path)?;

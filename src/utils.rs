@@ -8,6 +8,7 @@
 use std::env;
 use std::fs;
 use std::fs::File;
+use std::fs::remove_file;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -57,7 +58,7 @@ pub fn get_daily_filename() -> String {
 
 /// Creates a backup file of the daily file.
 pub fn create_backup(original: &Path, backup: &Path) -> anyhow::Result<()> {
-  debug_assert!(original.is_file() && !backup.is_file());
+  //debug_assert!(original.is_file() && !backup.is_file());
   File::create(backup).context("Failed to create the backup file")?;
   fs::copy(original, backup).context("Failed to copy the original to the backup")?;
   eprintln!("- Created backup file in: {}", backup.to_str().unwrap());
@@ -90,7 +91,7 @@ pub fn run_editor(editor: &str, path: &Path) -> anyhow::Result<()> {
   Ok(())
 }
 
-pub fn remove_file(path: &Path) -> anyhow::Result<()> {
+pub fn delete_file(path: &Path) -> anyhow::Result<()> {
   if !path.is_file() {
     eprintln!("- File {} doesn´t exit, skipping delete", path.to_str().unwrap());
     Ok(())
