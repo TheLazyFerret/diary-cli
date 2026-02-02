@@ -116,7 +116,7 @@ pub fn restore_backup(main: &Path, backup: &Path) -> anyhow::Result<()> {
 /// Restore all the '.backup' file in the data directory.
 pub fn backup_check(path: &Path) -> anyhow::Result<()> {
   // Retrieve the .backup file path list.
-  let backup_files: Vec<PathBuf> = get_backup_files(path)?;
+  let backup_files: Vec<PathBuf> = get_files_with_extension(&path, "backup")?;
   if backup_files.is_empty() {
     print_debug("No backup to restore");
     return Ok(());
@@ -137,8 +137,8 @@ pub fn backup_check(path: &Path) -> anyhow::Result<()> {
   Ok(())
 }
 
-/// Returns a vector with all the Path of the files with extension '.backup' in the directory.
-pub fn get_backup_files(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
+/// Returns a vector with all files in the directory path.
+pub fn get_files_in_directory(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
   let mut vec: Vec<PathBuf> = Vec::new();
   let entry_list = path.read_dir().context("Error reading directory")?;
   // First loop for getting files in the directory.
@@ -150,16 +150,22 @@ pub fn get_backup_files(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
       }
     }
   }
-  let mut curated_vec: Vec<PathBuf> = Vec::new();
+  Ok(vec)
+}
+
+/// Return a vector with all the files with 'filter_extension' as extension.
+pub fn get_files_with_extension(path: &Path, extension: &str) -> anyhow::Result<Vec<PathBuf>> {
+  let files_vec = get_files_in_directory(path)?;
+  let mut filtered_vec: Vec<PathBuf> = Vec::new();
   // Second loop for getting the .backup files.
-  for entry in vec {
-    if let Some(extension) = entry.extension() {
-      if extension.to_str().expect("Error unwrapping OsStr extension") == "backup" {
-        curated_vec.push(entry);
+  for entry in files_vec {
+    if let Some(file_ext) = entry.extension() {
+      if file_ext.to_str().expect("Error unwrapping OsStr extension") == extension {
+        filtered_vec.push(entry);
       }
     }
   }
-  Ok(curated_vec)
+  Ok(filtered_vec)
 }
 
 /// Check and print verbose logs in error output if enabled.
