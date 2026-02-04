@@ -18,33 +18,35 @@ use time::OffsetDateTime;
 const DEFAULT_XDG_DATA_PATH: &str = ".local/share";
 const PROGRAM_DIR_DATA_NAME: &str = "diary-cli";
 
+const UTF8_UNWRAP_ERROR: &str = "Error converting path to UTF-8";
+
 /// Returns the path where the program data will be stored.
 pub fn get_data_path() -> anyhow::Result<PathBuf> {
   let mut result: PathBuf;
   if let Ok(x) = env::var("XDG_DATA_HOME") {
     // if XDG_DATA_HOME is set, use that path.
     result = PathBuf::from(x);
-    print_debug(&format!("Home data directory found: {}", result.to_str().unwrap()));
+    print_debug(&format!("Home data directory found: {}", result.to_str().expect(UTF8_UNWRAP_ERROR)));
   } else {
     // If not, fallback to default '$HOME/.local/share'
     let home_raw_path = env::var("HOME").context("Failed to retrieve $HOME value")?;
     result = PathBuf::from(home_raw_path);
     result.push(DEFAULT_XDG_DATA_PATH);
-    print_debug(&format!("Home data directory found: {}", result.to_str().unwrap()));
+    print_debug(&format!("Home data directory found: {}", result.to_str().expect(UTF8_UNWRAP_ERROR)));
   }
   result.push(PROGRAM_DIR_DATA_NAME);
-  print_debug(&format!("Program data directory: {}", result.to_str().unwrap()));
+  print_debug(&format!("Program data directory: {}", result.to_str().expect(UTF8_UNWRAP_ERROR)));
   Ok(result)
 }
 
 /// Check if the data directory exist, if not, attempts to create it.
 pub fn check_data_dir(path: &Path) -> anyhow::Result<()> {
   if path.is_dir() {
-    print_debug(&format!("The data directory already exist: {}", path.to_str().unwrap()));
+    print_debug(&format!("The data directory already exist: {}", path.to_str().expect(UTF8_UNWRAP_ERROR)));
   } else {
     print_debug(&format!(
       "The data directory doesn't exist, will be created in: {}",
-      path.to_str().unwrap()
+      path.to_str().expect("Error converting to UTF-8")
     ));
     fs::create_dir(path).context("Failed to create the data directory")?;
     print_debug("The data directory was sucesfully created");
@@ -64,7 +66,7 @@ pub fn create_backup(original: &Path, backup: &Path) -> anyhow::Result<()> {
   debug_assert!(original.is_file() && !backup.is_file());
   File::create(backup).context("Failed to create the backup file")?;
   fs::copy(original, backup).context("Failed to copy the original to the backup")?;
-  print_debug(&format!("Created backup file in: {}", backup.to_str().unwrap()));
+  print_debug(&format!("Created backup file in: {}", backup.to_str().expect(UTF8_UNWRAP_ERROR)));
   Ok(())
 }
 
@@ -72,7 +74,7 @@ pub fn create_backup(original: &Path, backup: &Path) -> anyhow::Result<()> {
 pub fn create_data(path: &Path) -> anyhow::Result<()> {
   debug_assert!(!path.is_file());
   File::create(path).context("Failed to create the data file")?;
-  print_debug(&format!("Created data file in: {}", path.to_str().unwrap()));
+  print_debug(&format!("Created data file in: {}", path.to_str().expect(UTF8_UNWRAP_ERROR)));
   Ok(())
 }
 
@@ -95,11 +97,11 @@ pub fn run_editor(editor: &str, path: &Path) -> anyhow::Result<ExitStatus> {
 /// Function wrapper for removing a file from the filesystem.
 pub fn delete_file(path: &Path) -> anyhow::Result<()> {
   if !path.is_file() {
-    print_debug(&format!("File {} doesn´t exit, skipping delete", path.to_str().unwrap()));
+    print_debug(&format!("File {} doesn´t exit, skipping delete", path.to_str().expect(UTF8_UNWRAP_ERROR)));
     Ok(())
   } else {
     fs::remove_file(path).context("Failed to remove the file")?;
-    print_debug(&format!("File {} correctly removed", path.to_str().unwrap()));
+    print_debug(&format!("File {} correctly removed", path.to_str().expect(UTF8_UNWRAP_ERROR)));
     Ok(())
   }
 }
@@ -130,7 +132,7 @@ pub fn backup_check(path: &Path) -> anyhow::Result<()> {
       create_data(&data_file)?;
     } // Creates the file if not exist
     restore_backup(&data_file, &backup_file)?; // Restore the content.
-    print_debug(&format!("Correctly restored backup: {}", backup_file.to_str().unwrap()));
+    print_debug(&format!("Correctly restored backup: {}", backup_file.to_str().expect(UTF8_UNWRAP_ERROR)));
   }
   eprintln!();
   print_debug("Finish backup restauration");
@@ -198,4 +200,16 @@ pub fn open_file(data: &Path, backup: &Path, editor: &str) -> anyhow::Result<()>
   }
 
   Ok(())
+}
+
+/// List the data files in data path, and show them in standard output.
+pub fn list_data_files(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
+  let mut vec = get_files_with_extension(path, "txt")?;
+  vec.sort();
+  for file in vec.iter().enumerate() {
+    let aux_path = file.1.to_owned().with_extension("");
+    let filename = aux_path.file_name().expect("Error unwrapping filename").to_str().expect(UTF8_UNWRAP_ERROR);
+    println!("[{}] : {}",file.0, filename);
+  }
+  Ok(vec)
 }

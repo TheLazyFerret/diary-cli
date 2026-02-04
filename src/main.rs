@@ -5,41 +5,48 @@
 //!
 //! Main file of the crate.
 
+use std::path::PathBuf;
+
 use crate::utils::{
-  backup_check, check_data_dir, get_daily_filename, get_data_path, get_editor, open_file,
+  backup_check, check_data_dir, get_daily_filename, get_data_path, get_editor, list_data_files, open_file
 };
 
-use crate::args::set_arguments;
+use crate::args::get_arguments;
 
 mod args;
 mod utils;
 
 fn main() -> anyhow::Result<()> {
   // Parse and set the program args params.
-  set_arguments();
-
-  if *args::LIST.lock().expect("Error locking mutex") == true {
-    
-  }
+  get_arguments();
 
   // User home data directory.
-  let mut main_path = get_data_path()?;
+  let data_path = get_data_path()?;
+  
   // Check if the program data directory exist. If not, creates it.
-  check_data_dir(&main_path)?;
+  check_data_dir(&data_path)?;
 
   // Restore all the pending backup files.
-  backup_check(&main_path)?;
+  backup_check(&data_path)?;
 
-  // Push the date.
-  main_path.push(get_daily_filename());
-
-  // Data and backup (if needed) paths.
-  let backup_path = main_path.with_extension("backup");
-  let data_path = main_path.with_extension("txt");
+  if *args::LIST.lock().expect("Error locking mutex") == true {
+    let _x = list_data_files(&data_path)?;
+    return Ok(());
+  }
+  
+  let paths: (PathBuf, PathBuf) = {
+    if *args::SHOW.lock().expect("Error locking mutex") != !0 {
+      todo!()
+    } else {
+      let backup_path = data_path.with_file_name(get_daily_filename()).with_extension("backup");
+      let data_path = data_path.with_file_name(get_daily_filename()).with_extension("txt");
+      (data_path, backup_path)
+    }
+  };
 
   // env variable from $EDITOR
   let editor = get_editor()?;
 
   // Open the selected file.
-  open_file(&data_path, &backup_path, &editor)
+  open_file(&paths.0, &paths.1, &editor)
 }

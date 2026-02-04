@@ -31,7 +31,7 @@ struct Args {
 }
 
 /// Parse and set the program arguments configurations.
-pub fn set_arguments() {
+pub fn get_arguments() {
   let arguments = Args::parse();
   // Verbose
   if arguments.debug == true {
