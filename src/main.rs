@@ -8,7 +8,8 @@
 use std::path::PathBuf;
 
 use crate::utils::{
-  backup_check, check_data_dir, get_daily_filename, get_data_path, get_editor, list_data_files, open_file
+  backup_check, check_data_dir, get_daily_filename, get_data_path, get_date_from_index, get_editor,
+  list_data_files, open_file,
 };
 
 use crate::args::get_arguments;
@@ -22,7 +23,7 @@ fn main() -> anyhow::Result<()> {
 
   // User home data directory.
   let data_path = get_data_path()?;
-  
+
   // Check if the program data directory exist. If not, creates it.
   check_data_dir(&data_path)?;
 
@@ -30,19 +31,30 @@ fn main() -> anyhow::Result<()> {
   backup_check(&data_path)?;
 
   if *args::LIST.lock().expect("Error locking mutex") == true {
-    let _x = list_data_files(&data_path)?;
-    return Ok(());
+    return list_data_files(&data_path);
   }
-  
-  let paths: (PathBuf, PathBuf) = {
-    if *args::SHOW.lock().expect("Error locking mutex") != !0 {
-      todo!()
+
+  let data_index = *args::SHOW.lock().expect("Error locking mutex");
+
+  // Check if the index is valid
+
+  let paths: (PathBuf, PathBuf);
+  if data_index != !0 {
+    if let Some(aux) = get_date_from_index(&data_path, data_index)? {
+      let data_path = aux.with_extension("txt");
+      let backup_path = aux.with_added_extension("backup");
+      paths = (data_path, backup_path);
     } else {
-      let backup_path = data_path.with_file_name(get_daily_filename()).with_extension("backup");
-      let data_path = data_path.with_file_name(get_daily_filename()).with_extension("txt");
-      (data_path, backup_path)
+      println!("The index {} is not valid", data_index);
+      return Ok(());
     }
-  };
+  } else {
+    let mut aux = data_path.clone();
+    aux.push(get_daily_filename());
+    let data_path = aux.with_extension("txt");
+    let backup_path = aux.with_extension("backup");
+    paths = (data_path, backup_path);
+  }
 
   // env variable from $EDITOR
   let editor = get_editor()?;

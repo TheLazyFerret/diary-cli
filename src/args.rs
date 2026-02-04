@@ -12,7 +12,7 @@ use clap::Parser;
 /// Static global variable for enabling debug output.
 pub static DEBUG: Mutex<bool> = Mutex::new(false);
 pub static LIST: Mutex<bool> = Mutex::new(false);
-pub static SHOW: Mutex<u32> = Mutex::new(!0);
+pub static SHOW: Mutex<usize> = Mutex::new(!0);
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -27,7 +27,7 @@ struct Args {
 
   /// Open an specific day.
   #[arg(short, long, conflicts_with = "list")]
-  show: Option<u32>,
+  show: Option<usize>,
 }
 
 /// Parse and set the program arguments configurations.

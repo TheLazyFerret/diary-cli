@@ -26,13 +26,19 @@ pub fn get_data_path() -> anyhow::Result<PathBuf> {
   if let Ok(x) = env::var("XDG_DATA_HOME") {
     // if XDG_DATA_HOME is set, use that path.
     result = PathBuf::from(x);
-    print_debug(&format!("Home data directory found: {}", result.to_str().expect(UTF8_UNWRAP_ERROR)));
+    print_debug(&format!(
+      "Home data directory found: {}",
+      result.to_str().expect(UTF8_UNWRAP_ERROR)
+    ));
   } else {
     // If not, fallback to default '$HOME/.local/share'
     let home_raw_path = env::var("HOME").context("Failed to retrieve $HOME value")?;
     result = PathBuf::from(home_raw_path);
     result.push(DEFAULT_XDG_DATA_PATH);
-    print_debug(&format!("Home data directory found: {}", result.to_str().expect(UTF8_UNWRAP_ERROR)));
+    print_debug(&format!(
+      "Home data directory found: {}",
+      result.to_str().expect(UTF8_UNWRAP_ERROR)
+    ));
   }
   result.push(PROGRAM_DIR_DATA_NAME);
   print_debug(&format!("Program data directory: {}", result.to_str().expect(UTF8_UNWRAP_ERROR)));
@@ -42,7 +48,10 @@ pub fn get_data_path() -> anyhow::Result<PathBuf> {
 /// Check if the data directory exist, if not, attempts to create it.
 pub fn check_data_dir(path: &Path) -> anyhow::Result<()> {
   if path.is_dir() {
-    print_debug(&format!("The data directory already exist: {}", path.to_str().expect(UTF8_UNWRAP_ERROR)));
+    print_debug(&format!(
+      "The data directory already exist: {}",
+      path.to_str().expect(UTF8_UNWRAP_ERROR)
+    ));
   } else {
     print_debug(&format!(
       "The data directory doesn't exist, will be created in: {}",
@@ -97,7 +106,10 @@ pub fn run_editor(editor: &str, path: &Path) -> anyhow::Result<ExitStatus> {
 /// Function wrapper for removing a file from the filesystem.
 pub fn delete_file(path: &Path) -> anyhow::Result<()> {
   if !path.is_file() {
-    print_debug(&format!("File {} doesn´t exit, skipping delete", path.to_str().expect(UTF8_UNWRAP_ERROR)));
+    print_debug(&format!(
+      "File {} doesn´t exit, skipping delete",
+      path.to_str().expect(UTF8_UNWRAP_ERROR)
+    ));
     Ok(())
   } else {
     fs::remove_file(path).context("Failed to remove the file")?;
@@ -132,7 +144,10 @@ pub fn backup_check(path: &Path) -> anyhow::Result<()> {
       create_data(&data_file)?;
     } // Creates the file if not exist
     restore_backup(&data_file, &backup_file)?; // Restore the content.
-    print_debug(&format!("Correctly restored backup: {}", backup_file.to_str().expect(UTF8_UNWRAP_ERROR)));
+    print_debug(&format!(
+      "Correctly restored backup: {}",
+      backup_file.to_str().expect(UTF8_UNWRAP_ERROR)
+    ));
   }
   eprintln!();
   print_debug("Finish backup restauration");
@@ -198,18 +213,37 @@ pub fn open_file(data: &Path, backup: &Path, editor: &str) -> anyhow::Result<()>
       delete_file(&data)?;
     }
   }
-
   Ok(())
 }
 
-/// List the data files in data path, and show them in standard output.
-pub fn list_data_files(path: &Path) -> anyhow::Result<Vec<PathBuf>> {
-  let mut vec = get_files_with_extension(path, "txt")?;
+/// List the data files in data path, and show them in standard output, sorted.
+pub fn list_data_files(data_path: &Path) -> anyhow::Result<()> {
+  print_debug(&format!("listing files in: {}", data_path.to_str().expect(UTF8_UNWRAP_ERROR)));
+  let mut vec = get_files_with_extension(data_path, "txt")?;
+  if vec.len() == 0 {
+    println!("No files found");
+    return Ok(());
+  }
   vec.sort();
   for file in vec.iter().enumerate() {
     let aux_path = file.1.to_owned().with_extension("");
-    let filename = aux_path.file_name().expect("Error unwrapping filename").to_str().expect(UTF8_UNWRAP_ERROR);
-    println!("[{}] : {}",file.0, filename);
+    let filename = aux_path.file_name().unwrap().to_str().expect(UTF8_UNWRAP_ERROR);
+    println!("[{}] : {}", file.0, filename);
   }
-  Ok(vec)
+  Ok(())
+}
+
+/// Return a Option<PathBuf> from the data file list in data_path, sorted.
+pub fn get_date_from_index(data_path: &Path, index: usize) -> anyhow::Result<Option<PathBuf>> {
+  let str_path = data_path.to_str().expect(UTF8_UNWRAP_ERROR);
+  print_debug(&format!("Retrieving [{}] from: {}", index, str_path));
+  let mut vec = get_files_with_extension(data_path, "txt")?;
+  vec.sort();
+  if let Some(x) = vec.get(index) {
+    print_debug(&format!("Found: {}", x.to_str().expect(UTF8_UNWRAP_ERROR)));
+    Ok(Some(x.with_extension("")))
+  } else {
+    print_debug("No file found");
+    Ok(None)
+  }
 }
