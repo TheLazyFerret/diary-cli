@@ -20,15 +20,14 @@ struct Args {
   /// Show verbose output.
   #[arg(short, long)]
   debug: bool,
-  
+
   /// Show a list with all the entries.
   #[arg(short, long, conflicts_with = "show")]
   list: bool,
-  
+
   /// Open an specific day.
   #[arg(short, long, conflicts_with = "list")]
-  show: Option<u32>
-  
+  show: Option<u32>,
 }
 
 /// Parse and set the program arguments configurations.
@@ -45,7 +44,7 @@ pub fn set_arguments() {
     let mut locker = LIST.lock().expect("Error locking the mutex");
     *locker = true;
   }
-  
+
   // Show
   if let Some(x) = arguments.show {
     let mut locker = SHOW.lock().expect("Error locking the mutex");

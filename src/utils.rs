@@ -175,3 +175,27 @@ pub fn print_debug(message: &str) {
     eprintln!("[DEBUG] {}", message);
   }
 }
+
+/// Open a file with the selected editor. If already exist, then first creates a backup.
+pub fn open_file(data: &Path, backup: &Path, editor: &str) -> anyhow::Result<()> {
+  // If the file exist, creates a backup and edit a copy of it.
+  if data.is_file() {
+    create_backup(&data, &backup)?; // Creates the backup.
+    if !run_editor(&editor, &data)?.success() {
+      // If the editor failed.
+      println!("- Editor failed, restoring backup.");
+      restore_backup(&data, &backup)?;
+    } else {
+      delete_file(&backup)?;
+    }
+  } else {
+    // If the file doesn't exist, creates a new one and is edited directly.
+    create_data(&data)?;
+    if !run_editor(&editor, &data)?.success() {
+      println!("- Editor failed, deleting posible corrupted data.");
+      delete_file(&data)?;
+    }
+  }
+
+  Ok(())
+}

@@ -6,8 +6,7 @@
 //! Main file of the crate.
 
 use crate::utils::{
-  backup_check, check_data_dir, create_backup, create_data, delete_file, get_daily_filename,
-  get_data_path, get_editor, restore_backup, run_editor,
+  backup_check, check_data_dir, get_daily_filename, get_data_path, get_editor, open_file,
 };
 
 use crate::args::set_arguments;
@@ -18,6 +17,10 @@ mod utils;
 fn main() -> anyhow::Result<()> {
   // Parse and set the program args params.
   set_arguments();
+
+  if *args::LIST.lock().expect("Error locking mutex") == true {
+    
+  }
 
   // User home data directory.
   let mut main_path = get_data_path()?;
@@ -37,24 +40,6 @@ fn main() -> anyhow::Result<()> {
   // env variable from $EDITOR
   let editor = get_editor()?;
 
-  // If the file exist, creates a backup and edit a copy of it.
-  if data_path.is_file() {
-    create_backup(&data_path, &backup_path)?; // Creates the backup.
-    if !run_editor(&editor, &data_path)?.success() {
-      // If the editor failed.
-      println!("- Editor failed, restoring backup.");
-      restore_backup(&data_path, &backup_path)?;
-    } else {
-      delete_file(&backup_path)?;
-    }
-  } else {
-    // If the file doesn't exist, creates a new one and is edited directly.
-    create_data(&data_path)?;
-    if !run_editor(&editor, &data_path)?.success() {
-      println!("- Editor failed, deleting posible corrupted data.");
-      delete_file(&data_path)?;
-    }
-  }
-
-  Ok(())
+  // Open the selected file.
+  open_file(&data_path, &backup_path, &editor)
 }
