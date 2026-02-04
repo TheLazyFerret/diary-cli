@@ -17,11 +17,11 @@ pub static SHOW: Mutex<usize> = Mutex::new(!0);
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-  /// Show verbose output.
+  /// Show verbose output (in stderr).
   #[arg(short, long)]
   debug: bool,
 
-  /// Show a list with all the entries.
+  /// List all the entries.
   #[arg(short, long, conflicts_with = "show")]
   list: bool,
 
